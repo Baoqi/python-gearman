@@ -254,11 +254,12 @@ def pack_binary_command(cmd_type, cmd_args, is_response=False):
         raise ProtocolError('Received arguments with NULL byte in non-final argument')
 
     binary_payload = NULL_CHAR.join(data_items)
+    binary_payload = binary_payload.encode('utf-8')
 
     # Pack the header in the !4sII format then append the binary payload
     payload_size = len(binary_payload)
     packing_format = '!4sII%ds' % payload_size
-    return struct.pack(packing_format, magic.encode(), cmd_type, payload_size, binary_payload.encode())
+    return struct.pack(packing_format, magic.encode(), cmd_type, payload_size, binary_payload)
 
 def parse_text_command(in_buffer):
     """Parse a text command and return a single line at a time"""
