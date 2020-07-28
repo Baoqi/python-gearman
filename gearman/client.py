@@ -4,6 +4,7 @@ import logging
 import os
 import random
 import weakref
+import binascii
 
 import gearman.util
 
@@ -169,7 +170,7 @@ class GearmanClient(GearmanConnectionManager):
         # Make sure we have a unique identifier for ALL our tasks
         job_unique = job_info.get('unique')
         if not job_unique:
-            job_unique = os.urandom(self.random_unique_bytes).encode('hex')
+            job_unique = binascii.hexlify(os.urandom(self.random_unique_bytes)).decode('ascii')
 
         current_job = self.job_class(connection=None, handle=None, task=job_info['task'], unique=job_unique, data=job_info['data'])
 

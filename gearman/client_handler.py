@@ -48,11 +48,15 @@ class GearmanClientCommandHandler(GearmanCommandHandler):
         for pending_request in self.requests_awaiting_handles:
             pending_request.state = JOB_UNKNOWN
 
-        for inflight_request in self.handle_to_request_map.itervalues():
+        for inflight_request in self.handle_to_request_map.values():
             inflight_request.state = JOB_UNKNOWN
 
     def _register_request(self, current_request):
         self.handle_to_request_map[current_request.job.handle] = current_request
+
+    def _unregister_request(self, current_request):
+        # De-allocate this request for all jobs
+        return self.handle_to_request_map.pop(current_request.job.handle, None)
 
     ##################################################################
     ## Gearman command callbacks with kwargs defined by protocol.py ##
@@ -118,6 +122,7 @@ class GearmanClientCommandHandler(GearmanCommandHandler):
 
         current_request.result = self.decode_data(data)
         current_request.state = JOB_COMPLETE
+        self._unregister_request(current_request)
 
         return True
 
@@ -127,6 +132,7 @@ class GearmanClientCommandHandler(GearmanCommandHandler):
         self._assert_request_state(current_request, JOB_CREATED)
 
         current_request.state = JOB_FAILED
+        self._unregister_request(current_request)
 
         return True
 
@@ -155,5 +161,9 @@ class GearmanClientCommandHandler(GearmanCommandHandler):
             'denominator': int(denominator),
             'time_received': time.time()
         }
+
+        # If the server doesn't know about this request, we no longer need to track it
+        if not job_known:
+            self._unregister_request(current_request)
 
         return True

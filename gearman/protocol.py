@@ -186,6 +186,7 @@ def parse_binary_command(in_buffer, is_response=True):
 
     # By default, we'll assume we're dealing with a gearman command
     magic, cmd_type, cmd_len = struct.unpack('!4sII', in_buffer[:COMMAND_HEADER_SIZE])
+    magic = magic.decode('utf-8')
 
     received_bad_response = is_response and bool(magic != MAGIC_RES_STRING)
     received_bad_request = not is_response and bool(magic != MAGIC_REQ_STRING)
@@ -204,10 +205,10 @@ def parse_binary_command(in_buffer, is_response=True):
         return None, None, 0
 
     binary_payload = in_buffer[COMMAND_HEADER_SIZE:expected_packet_size]
+    binary_payload = binary_payload.decode('utf-8')
     split_arguments = []
 
     if len(expected_cmd_params) > 0:
-        binary_payload = binary_payload.tostring()
         split_arguments = binary_payload.split(NULL_CHAR, len(expected_cmd_params) - 1)
     elif binary_payload:
         raise ProtocolError('Expected no binary payload: %s' % get_command_name(cmd_type))
@@ -243,7 +244,7 @@ def pack_binary_command(cmd_type, cmd_args, is_response=False):
 
     # !NOTE! str should be replaced with bytes in Python 3.x
     # We will iterate in ORDER and str all our command arguments
-    if compat.any(type(param_value) != str for param_value in cmd_args.itervalues()):
+    if compat.any(type(param_value) != str for param_value in cmd_args.values()):
         raise ProtocolError('Received non-binary arguments: %r' % cmd_args)
 
     data_items = [cmd_args[param] for param in expected_cmd_params]
@@ -257,17 +258,18 @@ def pack_binary_command(cmd_type, cmd_args, is_response=False):
     # Pack the header in the !4sII format then append the binary payload
     payload_size = len(binary_payload)
     packing_format = '!4sII%ds' % payload_size
-    return struct.pack(packing_format, magic, cmd_type, payload_size, binary_payload)
+    return struct.pack(packing_format, magic.encode(), cmd_type, payload_size, binary_payload.encode())
 
 def parse_text_command(in_buffer):
     """Parse a text command and return a single line at a time"""
     cmd_type = None
     cmd_args = None
     cmd_len = 0
+    in_buffer = in_buffer.decode()
     if '\n' not in in_buffer:
         return cmd_type, cmd_args, cmd_len
 
-    text_command, in_buffer = in_buffer.tostring().split('\n', 1)
+    text_command, in_buffer = in_buffer.split('\n', 1)
     if NULL_CHAR in text_command:
         raise ProtocolError('Received unexpected character: %s' % text_command)
 

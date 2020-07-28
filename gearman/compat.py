@@ -36,7 +36,7 @@ except ImportError:
         taken from http://code.activestate.com/recipes/523034-emulate-collectionsdefaultdict/"""
         def __init__(self, default_factory=None, * a, ** kw):
             if (default_factory is not None and
-                not hasattr(default_factory, '__call__')):
+                    not hasattr(default_factory, '__call__')):
                 raise TypeError('first argument must be callable')
             dict.__init__(self, * a, ** kw)
             self.default_factory = default_factory
@@ -55,7 +55,7 @@ except ImportError:
                 args = tuple()
             else:
                 args = self.default_factory,
-            return type(self), args, None, None, self.items()
+            return type(self), args, None, None, list(self.items())
         def copy(self):
             return self.__copy__()
         def __copy__(self):
@@ -63,7 +63,7 @@ except ImportError:
         def __deepcopy__(self, memo):
             import copy
             return type(self)(self.default_factory,
-                              copy.deepcopy(self.items()))
+                              copy.deepcopy(list(self.items())))
         def __repr__(self):
             return 'defaultdict(%s, %s)' % (self.default_factory,
                                             dict.__repr__(self))
